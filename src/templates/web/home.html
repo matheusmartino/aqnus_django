@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}AQNUS - ERP Escolar{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+    <h1>AQNUS</h1>
+    <p class="lead text-muted">Sistema de Gestão Educacional</p>
+    <a href="{% url 'admin:index' %}" class="btn btn-primary">Acessar Painel Administrativo</a>
+</div>
+{% endblock %}

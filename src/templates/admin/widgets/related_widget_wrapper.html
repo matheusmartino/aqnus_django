@@ -1,0 +1,15 @@
+{# ───────────────────────────────────────────────────────────────────
+   Override do template padrao do Django Admin.
+
+   O template original renderiza botoes (add/change/delete/view) ao
+   lado de cada campo FK e O2O. Este override remove TODOS os botoes,
+   renderizando apenas o campo.
+
+   Camada 2 da padronizacao visual — atua no nivel do template HTML.
+   Complementado pela Camada 1 (widget Python) e Camada 3 (CSS).
+
+   Arquivo original: django/contrib/admin/templates/admin/widgets/related_widget_wrapper.html
+   ─────────────────────────────────────────────────────────────────── #}
+<div class="related-widget-wrapper" {% if not model_has_limit_choices_to %}data-model-ref="{{ model_name }}"{% endif %}>
+    {{ rendered_widget }}
+</div>

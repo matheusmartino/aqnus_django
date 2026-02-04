@@ -1,0 +1,89 @@
+/*
+ * aqnus_admin.css — Padronizacao visual do Django Admin AQNUS
+ *
+ * Camada 3 da padronizacao visual — atua no nivel do CSS.
+ * Complementado pela Camada 1 (widget Python) e Camada 2 (template override).
+ *
+ * Regras:
+ * - NAO usar cores hard-coded — respeitar as variaveis CSS do Django
+ *   (var(--body-bg), var(--text-fg), etc.) para compatibilidade com modo escuro.
+ * - Foco em layout: largura, espacamento, compactacao.
+ * - Cada secao documentada com proposito claro.
+ */
+
+
+/* ──────────────────────────────────────────
+   Formularios — largura controlada
+   ────────────────────────────────────────── */
+
+/* Centraliza e limita o conteudo do formulario */
+#content {
+    max-width: 960px;
+}
+
+/* Fieldsets com respiro vertical reduzido */
+fieldset .form-row {
+    padding: 6px 12px;
+}
+
+/* Modulos com margem inferior menor */
+.module {
+    margin-bottom: 16px;
+}
+
+
+/* ──────────────────────────────────────────
+   Campos — largura maxima consistente
+   ────────────────────────────────────────── */
+
+/* Labels com largura fixa para alinhamento */
+.aligned label {
+    width: 170px;
+}
+
+/* Inputs e selects nao estouram a area */
+.aligned .form-row input[type="text"],
+.aligned .form-row input[type="number"],
+.aligned .form-row input[type="url"],
+.aligned .form-row input[type="email"],
+.aligned .form-row input[type="date"],
+.aligned .form-row select {
+    max-width: 480px;
+    box-sizing: border-box;
+}
+
+/* Textarea mais compacto */
+.aligned .form-row textarea {
+    max-width: 480px;
+    box-sizing: border-box;
+}
+
+/* Select2 (autocomplete) com largura controlada */
+.aligned .form-row .select2-container,
+.related-widget-wrapper .select2-container {
+    max-width: 480px !important;
+}
+
+
+/* ──────────────────────────────────────────
+   Inlines — tabular mais compacta
+   ────────────────────────────────────────── */
+
+.inline-group .tabular td,
+.inline-group .tabular th {
+    padding: 6px 8px;
+}
+
+
+/* ──────────────────────────────────────────
+   Icones de acao em FK — garantia de remocao
+   ────────────────────────────────────────── */
+
+/*
+ * Fallback CSS: esconde qualquer botao residual de add/change/delete/view
+ * mesmo que o template ou widget nao o tenha removido.
+ * Terceira camada de defesa (apos widget Python e template override).
+ */
+.related-widget-wrapper-link {
+    display: none !important;
+}

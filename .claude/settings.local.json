@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip --version:*)",
+      "Bash(python -m venv:*)",
+      "Bash(venvScriptspip install django)",
+      "Bash(./venv/Scripts/pip.exe install:*)",
+      "Bash(./venv/Scripts/django-admin.exe:*)",
+      "Bash(./venv/Scripts/python.exe:*)",
+      "Bash(./venv/Scripts/python.exe manage.py startapp:*)",
+      "Bash(./venv/Scripts/python.exe manage.py:*)",
+      "Bash(dir:*)",
+      "Bash(find:*)",
+      "Bash(./venv/Scripts/python manage.py check:*)",
+      "Bash(./venv/Scripts/python manage.py showmigrations:*)",
+      "Bash(./venv/Scripts/python -c \"import sys; sys.path.insert\\(0, ''src''\\); from core.models import ModeloBase; print\\(''Import OK:'', ModeloBase.__name__\\)\")",
+      "Bash(./venv/Scripts/python:*)",
+      "Bash(psql:*)",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/psql.exe\" -U postgres -c \"SELECT usename FROM pg_user WHERE usename=''aqnus'';\")",
+      "Bash(DJANGO_SETTINGS_MODULE=aqnus.settings ./venv/Scripts/python:*)",
+      "Bash(python manage.py check:*)",
+      "Bash(\"C:\\\\Users\\\\matheus.martino\\\\source\\\\repos_personal\\\\aqnus_app\\\\venv\\\\Scripts\\\\python.exe\" manage.py check)",
+      "Bash(tree:*)",
+      "Bash(\"C:\\\\Users\\\\matheus.martino\\\\source\\\\repos_personal\\\\aqnus_app\\\\venv\\\\Scripts\\\\python.exe\" -c:*)"
+    ]
+  }
+}
