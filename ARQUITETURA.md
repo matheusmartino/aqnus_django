@@ -92,10 +92,16 @@ src/<app>/
 - Admin com inlines: AlunoTurma e Matricula na Turma, ProfessorDisciplina na Disciplina, Movimentacoes na Matricula
 - Futuramente: Frequencia, Notas, Boletim (Etapa 4), Horarios de aula
 
-### `library` (futuro)
-- Acervo (livros, periódicos)
-- Empréstimo, Devolução, Reserva
-- Controle de multas
+### `library`
+- `Autor` — autor de obras do acervo
+- `Editora` — editora de publicacoes
+- `Assunto` — categoria tematica (nome unico)
+- `Obra` — titulo intelectual (conteudo). Vincula autores (M2M), editora (FK) e assunto (FK). ISBN unico quando preenchido.
+- `Exemplar` — copia fisica de uma obra (objeto). Codigo de patrimonio unico. Situacao (disponivel/emprestado/indisponivel/baixado) controlada pelo BibliotecaService.
+- `Emprestimo` — evento de emprestimo de exemplar a aluno. Status (ativo/devolvido/atrasado) controlado pelo service. Constraint parcial: um emprestimo ativo por exemplar.
+- `BibliotecaService` — regras de negocio para emprestar, devolver e atualizar atrasos (em `library/services/`)
+- Admin com ExemplarInline na Obra, devolucao via admin action, situacao do exemplar como readonly
+- Futuramente: Reserva de exemplares, Multas por atraso
 
 ### `web`
 - Portal web simples com Django Templates + Bootstrap
@@ -192,9 +198,9 @@ O domínio é escolar brasileiro. Os operadores do sistema (secretaria, coordena
 
 3. **Etapa 3** ✅: Operacao escolar — Matricula (evento formal), MovimentacaoAluno (historico), Responsavel e AlunoResponsavel (filiacao). MatriculaService com regras de negocio. Seed operacional.
 
-4. **Etapa 4**: Frequencia, Notas, Boletim. Lancamentos pelo Admin e depois por telas proprias.
+4. **Etapa 4** ✅: Biblioteca escolar — Autor, Editora, Assunto, Obra, Exemplar, Emprestimo. BibliotecaService com regras de emprestimo/devolucao. Seed da biblioteca.
 
-5. **Etapa 5**: App `library` com acervo e emprestimos.
+5. **Etapa 5**: Frequencia, Notas, Boletim. Lancamentos pelo Admin e depois por telas proprias.
 
 6. **Etapa 6**: Portal web com autenticacao, paineis por perfil.
 
@@ -269,6 +275,15 @@ Etapa 3 — OPERACAO (o que acontece no dia a dia)
 │  AlunoResponsavel ── (vinculo N:N de filiacao)    │
 │  MatriculaService ── regras de negocio            │
 └─────────────────────────────────────────────────┘
+
+Etapa 4 — BIBLIOTECA (acervo e circulacao)
+┌─────────────────────────────────────────────────┐
+│  Autor / Editora / Assunto ── cadastros auxiliares │
+│  Obra ── conteudo intelectual (titulo, ISBN)       │
+│       └── Exemplar ── objeto fisico (patrimonio)   │
+│              └── Emprestimo ── evento de circulacao │
+│  BibliotecaService ── regras de emprestimo         │
+└─────────────────────────────────────────────────┘
 ```
 
 ### Cadastro vs. Estrutura vs. Operacao
@@ -312,6 +327,53 @@ O vinculo entre aluno e responsavel e modelado como uma **relacao N:N** (tabela 
 - Dois irmaos compartilharem os mesmos responsaveis sem duplicar dados
 - Cada vinculo ter metadados proprios (principal, autorizado a retirar)
 - Responsavel e uma Pessoa — pode ter perfil de Funcionario ou Professor simultaneamente
+
+### Obra como conteudo vs. Exemplar como objeto vs. Emprestimo como evento
+
+A separacao em tres camadas segue o mesmo padrao evento x estado da Matricula:
+
+- **Obra** (conteudo): representa o titulo intelectual — "Dom Casmurro" de Machado de Assis. E um registro de catalogo. Nao e emprestada diretamente.
+- **Exemplar** (objeto/estado): representa a copia fisica — o livro que esta na prateleira. Tem codigo de patrimonio unico e situacao (disponivel/emprestado). A situacao e derivada dos emprestimos ativos.
+- **Emprestimo** (evento): representa o ato de emprestar — quando, para quem, com que prazo. E um registro historico. O status evolui: ativo → devolvido (ou atrasado → devolvido).
+
+```
+Exemplar emprestado  → Emprestimo(status=ativo)
+                     → Exemplar(situacao=emprestado)
+
+Exemplar devolvido   → Emprestimo(status=devolvido, data_devolucao=hoje)
+                     → Exemplar(situacao=disponivel)
+
+Emprestimo atrasado  → Emprestimo(status=atrasado)
+                     → Exemplar(situacao=emprestado)
+```
+
+O `BibliotecaService` e o unico ponto de mutacao — admin e seeds chamam o service, nunca alteram Emprestimo ou Exemplar.situacao diretamente.
+
+### Criterios de encerramento — Etapa 4
+
+- [x] Models criados: Autor, Editora, Assunto, Obra, Exemplar, Emprestimo
+- [x] Todos estendem `ModeloBase` (campos de auditoria)
+- [x] ForeignKeys com `on_delete=PROTECT` para seguranca referencial
+- [x] Partial UniqueConstraint: apenas um emprestimo ativo por exemplar
+- [x] UniqueConstraint condicional: ISBN unico quando preenchido
+- [x] Assunto com nome unico
+- [x] `BibliotecaService` com regras de negocio: emprestar, devolver, atualizar atrasos
+- [x] Service usa `@transaction.atomic` para consistencia
+- [x] Situacao do exemplar derivada — controlada apenas pelo service (readonly no admin)
+- [x] Admin: ExemplarInline na Obra, devolucao via admin action
+- [x] Admin: emprestimos devolvidos bloqueados para edicao/exclusao
+- [x] Admin: novo emprestimo via admin chama o service
+- [x] Repositories criados para todas as entidades
+- [x] Forms com mensagens de erro humanas para constraints
+- [x] Todos os admins herdam `SemIconesRelacionaisMixin`
+- [x] Todos os campos FK usam `autocomplete_fields`
+- [x] Migration gerada e aplicavel
+- [x] Seed da biblioteca (`seed_biblioteca`) com validacao de pre-requisitos da Etapa 1
+- [x] Seed idempotente e atomico
+- [x] Seed demonstra: emprestimo ativo, devolvido e atrasado
+- [x] Nenhum model das Etapas 1, 2 e 3 foi alterado
+- [x] Seeds anteriores (`seed_data`, `seed_academic`, `seed_operacional`) continuam funcionando
+- [x] Documentacao atualizada (README.md, ARQUITETURA.md)
 
 ## Papel do Django Admin vs. Portal Web
 

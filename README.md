@@ -9,7 +9,7 @@ ERP escolar desenvolvido em Django, com foco em cadastros acadêmicos, estrutura
 | 1 | Cadastros fundamentais (Pessoa, Aluno, Professor, Funcionário, Escola, Usuário) | **Concluída** |
 | 2 | Estrutura acadêmica (AnoLetivo, Disciplina, Turma, ProfessorDisciplina, AlunoTurma) | **Concluída** |
 | 3 | Operacao escolar (Matricula, Responsaveis, Historico) | **Concluida** |
-| 4 | Biblioteca escolar (Acervo, Empréstimo, Devolução) | Planejada |
+| 4 | Biblioteca escolar (Acervo, Emprestimo, Devolucao) | **Concluida** |
 | 5 | Portal web (Painel do aluno, professor e responsável) | Planejada |
 
 ## Tecnologia
@@ -42,7 +42,7 @@ aqnus_app/
     ├── accounts/           # Usuario customizado, autenticacao, perfis
     ├── people/             # Cadastro de pessoas (Pessoa, Aluno, Professor, Funcionario)
     ├── academic/           # Estrutura academica (Etapa 2)
-    ├── library/            # (futuro) Biblioteca
+    ├── library/            # Biblioteca escolar (Etapa 4)
     ├── web/                # Portal web simples (templates)
     ├── templates/          # Templates globais (base.html)
     └── static/             # Arquivos estaticos globais
@@ -227,13 +227,32 @@ Requer que os seeds das Etapas 1 e 2 ja tenham sido executados. Cria os dados op
 
 Idempotente — pode rodar varias vezes sem duplicar dados.
 
-### 10. Rodar o servidor
+### 10. Popular dados da biblioteca (seed Etapa 4)
+
+```bash
+python manage.py seed_biblioteca
+```
+
+Requer que o seed da Etapa 1 ja tenha sido executado. Cria os dados da biblioteca:
+
+| Entidade | Qtd | Exemplos |
+|----------|-----|----------|
+| Autores | 5 | Machado de Assis, Monteiro Lobato, Clarice Lispector, Jorge Amado, Cecilia Meireles |
+| Editoras | 3 | Companhia das Letras, Editora Atica, Editora Moderna |
+| Assuntos | 4 | Literatura Brasileira, Ciencias, Historia, Infantojuvenil |
+| Obras | 6 | Dom Casmurro, O Sitio do Picapau Amarelo, A Hora da Estrela, etc. |
+| Exemplares | 10 | BIB-0001 a BIB-0010 (com estados fisicos variados) |
+| Emprestimos | 3 | 1 ativo, 1 devolvido, 1 atrasado |
+
+Idempotente — pode rodar varias vezes sem duplicar dados.
+
+### 11. Rodar o servidor
 
 ```bash
 python manage.py runserver
 ```
 
-### 11. Acessar
+### 12. Acessar
 
 - Portal: http://127.0.0.1:8000/
 - Admin: http://127.0.0.1:8000/admin/
@@ -263,6 +282,9 @@ python manage.py seed_academic
 
 # Popular dados operacionais (Etapa 3)
 python manage.py seed_operacional
+
+# Popular dados da biblioteca (Etapa 4)
+python manage.py seed_biblioteca
 
 # Abrir shell Django
 python manage.py shell
@@ -389,3 +411,50 @@ A Etapa 3 esta **concluida**. Ela cobre a **operacao escolar e filiacao**:
 - Boletim — Etapa futura
 - Financeiro — futuro
 - Biblioteca — Etapa 4
+
+## Etapa 4 — Escopo e status
+
+A Etapa 4 esta **concluida**. Ela cobre a **biblioteca escolar**:
+
+### Conceitos-chave
+
+- **Obra (conteudo)**: titulo intelectual — livro, periodico, publicacao. Uma obra pode ter multiplos autores, uma editora e um assunto. Nao e emprestada diretamente.
+- **Exemplar (objeto)**: copia fisica de uma obra. Tem codigo de patrimonio unico, estado fisico e situacao (disponivel/emprestado/indisponivel/baixado). A situacao e controlada exclusivamente pelo BibliotecaService.
+- **Emprestimo (evento)**: registro de quando um exemplar e emprestado a um aluno. Tem status (ativo/devolvido/atrasado) controlado pelo service. Constraint parcial garante um emprestimo ativo por exemplar.
+
+### Entidades criadas
+
+| Entidade | App | Descricao |
+|----------|-----|-----------|
+| Autor | library | Autor de obras do acervo |
+| Editora | library | Editora de publicacoes |
+| Assunto | library | Categoria tematica (unica) |
+| Obra | library | Titulo intelectual (conteudo) |
+| Exemplar | library | Copia fisica de uma obra (objeto) |
+| Emprestimo | library | Evento de emprestimo de exemplar |
+
+### Fluxos operacionais
+
+1. **Emprestimo**: `BibliotecaService.emprestar_exemplar()` → valida disponibilidade → cria Emprestimo → atualiza Exemplar.situacao para 'emprestado'
+2. **Devolucao**: `BibliotecaService.devolver_exemplar()` → valida status → registra data_devolucao → atualiza Exemplar.situacao para 'disponivel'
+3. **Atraso**: `BibliotecaService.atualizar_emprestimos_atrasados()` → busca emprestimos ativos com data prevista no passado → atualiza status para 'atrasado'
+
+### Regras de negocio (em `library/services/biblioteca_service.py`)
+
+- Um exemplar so pode ser emprestado se estiver disponivel e ativo
+- Um exemplar so pode ter um emprestimo ativo por vez (constraint parcial no banco + validacao no service)
+- A situacao do exemplar e derivada — controlada apenas pelo service, nunca editada manualmente
+- Emprestimos devolvidos sao bloqueados para edicao e exclusao no admin
+- Devolucao via admin action ("Devolver exemplar(es) selecionado(s)")
+- Novo emprestimo via admin chama o service automaticamente
+
+### Seed
+
+`python manage.py seed_biblioteca` — cria autores, editoras, assuntos, obras, exemplares e emprestimos de demonstracao (ativo, devolvido, atrasado).
+
+### O que NAO faz parte da Etapa 4
+
+- Notas e frequencia — Etapa futura
+- Reserva de exemplares — futuro
+- Multas por atraso — futuro
+- Portal web — Etapa 5
