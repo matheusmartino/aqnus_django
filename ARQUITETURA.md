@@ -73,19 +73,24 @@ src/<app>/
 - Futuramente: login/logout customizado, permissões por papel
 
 ### `people`
-- `Pessoa` como entidade base (dados pessoais: nome, CPF, contato, endereço)
+- `Pessoa` como entidade base (dados pessoais: nome, CPF, contato, endereco)
 - `Aluno`, `Professor`, `Funcionario` como perfis vinculados via `OneToOneField`
-- Uma mesma Pessoa pode ter múltiplos perfis (ex: funcionário que é aluno)
-- Futuramente: Responsável, Contato de emergência
+- `Responsavel` — perfil de responsavel vinculado a Pessoa (pai, mae, responsavel legal)
+- `AlunoResponsavel` — vinculo aluno-responsavel com tipo, principal, autorizacao de retirada
+- Uma mesma Pessoa pode ter multiplos perfis (ex: funcionario que e aluno)
+- Dois alunos irmaos compartilham os mesmos responsaveis (relacao N:N via tabela associativa)
 
 ### `academic`
-- `AnoLetivo` — período letivo com datas de início/fim e status ativo
-- `Disciplina` — componente curricular com código único e carga horária
+- `AnoLetivo` — periodo letivo com datas de inicio/fim e status ativo
+- `Disciplina` — componente curricular com codigo unico e carga horaria
 - `Turma` — agrupamento de alunos, vinculada a ano letivo e escola (unique por trio)
-- `ProfessorDisciplina` — vínculo professor-disciplina por ano letivo (unique por trio)
-- `AlunoTurma` — matrícula de aluno em turma (unique por par)
-- Admin com inlines: matricular alunos na tela da Turma, vincular professores na tela da Disciplina
-- Futuramente: Frequência, Notas, Boletim (Etapa 3), Horários de aula
+- `ProfessorDisciplina` — vinculo professor-disciplina por ano letivo (unique por trio)
+- `AlunoTurma` — estado atual do aluno na turma (unique por par, flag `ativo`)
+- `Matricula` — evento formal de matricula com tipo (inicial/transferencia/remanejamento) e status (ativa/encerrada/cancelada)
+- `MovimentacaoAluno` — historico imutavel de eventos (matricula, transferencia, encerramento)
+- `MatriculaService` — regras de negocio para matricular, transferir e encerrar (em `academic/services/`)
+- Admin com inlines: AlunoTurma e Matricula na Turma, ProfessorDisciplina na Disciplina, Movimentacoes na Matricula
+- Futuramente: Frequencia, Notas, Boletim (Etapa 4), Horarios de aula
 
 ### `library` (futuro)
 - Acervo (livros, periódicos)
@@ -185,13 +190,15 @@ O domínio é escolar brasileiro. Os operadores do sistema (secretaria, coordena
 
 2. **Etapa 2** ✅: Estrutura acadêmica — AnoLetivo, Disciplina, Turma, ProfessorDisciplina, AlunoTurma. Admin com inlines, repositories, seed acadêmico.
 
-3. **Etapa 3**: Operação diária — Frequência, Notas, Boletim. Lançamentos pelo Admin e depois por telas próprias.
+3. **Etapa 3** ✅: Operacao escolar — Matricula (evento formal), MovimentacaoAluno (historico), Responsavel e AlunoResponsavel (filiacao). MatriculaService com regras de negocio. Seed operacional.
 
-4. **Etapa 4**: App `library` com acervo e empréstimos.
+4. **Etapa 4**: Frequencia, Notas, Boletim. Lancamentos pelo Admin e depois por telas proprias.
 
-5. **Etapa 5**: Portal web com autenticação, painéis por perfil.
+5. **Etapa 5**: App `library` com acervo e emprestimos.
 
-6. **Futuramente**: API REST (Django REST Framework) se houver necessidade de integração com apps mobile ou sistemas externos.
+6. **Etapa 6**: Portal web com autenticacao, paineis por perfil.
+
+7. **Futuramente**: API REST (Django REST Framework) se houver necessidade de integracao com apps mobile ou sistemas externos.
 
 ### Critérios de encerramento — Etapa 2
 
@@ -206,6 +213,105 @@ O domínio é escolar brasileiro. Os operadores do sistema (secretaria, coordena
 - [x] Seed idempotente e atômico (`get_or_create` + `transaction.atomic`)
 - [x] Organização por entidade (models/, repositories/ com arquivos separados)
 - [x] Documentação atualizada (README.md, ARQUITETURA.md)
+
+### Criterios de encerramento — Etapa 3
+
+- [x] Models criados: Matricula, MovimentacaoAluno (academic), Responsavel, AlunoResponsavel (people)
+- [x] Todos estendem `ModeloBase` (campos de auditoria)
+- [x] ForeignKeys com `on_delete=PROTECT` para seguranca referencial
+- [x] Partial UniqueConstraint: apenas uma matricula ativa por aluno/ano (`condition=Q(status='ativa')`)
+- [x] UniqueConstraint composta: aluno+responsavel
+- [x] `MatriculaService` com regras de negocio: matricular, transferir, encerrar
+- [x] Service usa `@transaction.atomic` para consistencia
+- [x] `MovimentacaoAluno` criado automaticamente pelo service (historico imutavel)
+- [x] Admin readonly para MovimentacaoAluno (sem edicao manual)
+- [x] Inlines: Movimentacoes na Matricula, Matriculas na Turma, Responsaveis no Aluno e na Pessoa
+- [x] Repositories criados para todas as entidades novas
+- [x] Forms com mensagens de erro humanas para constraints
+- [x] Todos os admins herdam `SemIconesRelacionaisMixin`
+- [x] Todos os campos FK usam `autocomplete_fields`
+- [x] Migrations geradas e aplicaveis (`0002_etapa3_operacional` em ambos os apps)
+- [x] Seed operacional (`seed_operacional`) com validacao de pre-requisitos das Etapas 1 e 2
+- [x] Seed idempotente e atomico
+- [x] Seed demonstra: matricula inicial, transferencia, encerramento, filiacao com irmaos
+- [x] Nenhum model das Etapas 1 e 2 foi alterado
+- [x] Seeds anteriores (`seed_data`, `seed_academic`) continuam funcionando
+- [x] Documentacao atualizada (README.md, ARQUITETURA.md)
+
+## Evolucao do dominio
+
+O sistema cresce em camadas complementares. Cada etapa adiciona uma dimensao ao dominio sem alterar o que ja existe:
+
+```
+Etapa 1 — CADASTRO (quem existe)
+┌─────────────────────────────────────────────────┐
+│  Pessoa ──┬── Aluno                             │
+│           ├── Professor                         │
+│           └── Funcionario                       │
+│  Escola                                         │
+│  Usuario ── (papel: admin/secretaria/professor)  │
+└─────────────────────────────────────────────────┘
+
+Etapa 2 — ESTRUTURA (como a escola se organiza)
+┌─────────────────────────────────────────────────┐
+│  AnoLetivo                                       │
+│  Disciplina                                      │
+│  Turma ── (ano_letivo + escola)                  │
+│  ProfessorDisciplina ── (professor + disciplina)  │
+│  AlunoTurma ── (aluno + turma) [ESTADO ATUAL]    │
+└─────────────────────────────────────────────────┘
+
+Etapa 3 — OPERACAO (o que acontece no dia a dia)
+┌─────────────────────────────────────────────────┐
+│  Matricula ── evento formal (inicial/transf.)    │
+│       └── MovimentacaoAluno ── historico imutavel │
+│  Responsavel ── (pessoa com perfil de guardiao)   │
+│  AlunoResponsavel ── (vinculo N:N de filiacao)    │
+│  MatriculaService ── regras de negocio            │
+└─────────────────────────────────────────────────┘
+```
+
+### Cadastro vs. Estrutura vs. Operacao
+
+| Dimensao | Pergunta que responde | Muda com frequencia? | Exemplos |
+|----------|----------------------|---------------------|----------|
+| **Cadastro** | Quem sao as pessoas e a escola? | Raramente | Pessoa, Aluno, Professor, Escola |
+| **Estrutura** | Como a escola esta organizada este ano? | Por ano letivo | Turma, Disciplina, AnoLetivo |
+| **Operacao** | O que aconteceu com este aluno? | Diariamente | Matricula, Transferencia, Movimentacao |
+
+### Matricula como evento vs. AlunoTurma como estado
+
+A `Matricula` registra **o que aconteceu** (evento): quando o aluno foi matriculado, de que tipo (inicial, transferencia), qual o status resultante. E um registro historico — nunca e apagado, apenas encerrado ou cancelado.
+
+O `AlunoTurma` registra **onde o aluno esta agora** (estado): em qual turma, se esta ativo. E atualizado pelo `MatriculaService` como consequencia de uma operacao.
+
+```
+Aluno matriculado    → Matricula(tipo=inicial, status=ativa)
+                     → AlunoTurma(ativo=True)
+                     → MovimentacaoAluno(tipo=matricula_inicial)
+
+Aluno transferido    → Matricula antiga(status=encerrada)
+                     → Matricula nova(tipo=transferencia, status=ativa)
+                     → AlunoTurma antigo(ativo=False)
+                     → AlunoTurma novo(ativo=True)
+                     → MovimentacaoAluno(tipo=transferencia_saida)
+                     → MovimentacaoAluno(tipo=transferencia_entrada)
+
+Aluno encerrado      → Matricula(status=encerrada)
+                     → AlunoTurma(ativo=False)
+                     → MovimentacaoAluno(tipo=encerramento)
+```
+
+O `MatriculaService` e o unico ponto de mutacao — admin, views e seeds chamam o service, nunca alteram Matricula ou MovimentacaoAluno diretamente.
+
+### Filiacao como relacao, nao como atributo
+
+O vinculo entre aluno e responsavel e modelado como uma **relacao N:N** (tabela associativa `AlunoResponsavel`), nao como campos no model do aluno (ex: `nome_pai`, `nome_mae`). Isso permite:
+
+- Um aluno ter multiplos responsaveis (pai, mae, tutor)
+- Dois irmaos compartilharem os mesmos responsaveis sem duplicar dados
+- Cada vinculo ter metadados proprios (principal, autorizado a retirar)
+- Responsavel e uma Pessoa — pode ter perfil de Funcionario ou Professor simultaneamente
 
 ## Papel do Django Admin vs. Portal Web
 

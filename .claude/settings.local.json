@@ -21,7 +21,9 @@
       "Bash(python manage.py check:*)",
       "Bash(\"C:\\\\Users\\\\matheus.martino\\\\source\\\\repos_personal\\\\aqnus_app\\\\venv\\\\Scripts\\\\python.exe\" manage.py check)",
       "Bash(tree:*)",
-      "Bash(\"C:\\\\Users\\\\matheus.martino\\\\source\\\\repos_personal\\\\aqnus_app\\\\venv\\\\Scripts\\\\python.exe\" -c:*)"
+      "Bash(\"C:\\\\Users\\\\matheus.martino\\\\source\\\\repos_personal\\\\aqnus_app\\\\venv\\\\Scripts\\\\python.exe\" -c:*)",
+      "Bash(ls \"C:\\\\Users\\\\matheus.martino\\\\source\\\\repos_personal\\\\aqnus_app\\\\src\\\\academic\\\\management\\\\commands\"\" 2>/dev/null || echo \"LISTING_FAILED \")",
+      "Bash(\"C:\\\\Users\\\\matheus.martino\\\\source\\\\repos_personal\\\\aqnus_app\\\\venv\\\\Scripts\\\\python.exe\" manage.py makemigrations:*)"
     ]
   }
 }

@@ -1,8 +1,22 @@
 from django.contrib import admin
 
 from core.admin_mixins import SemIconesRelacionaisMixin
-from .forms import PessoaForm, AlunoForm, ProfessorForm, FuncionarioForm
-from .models import Aluno, Funcionario, Pessoa, Professor
+from .forms import (
+    PessoaForm,
+    AlunoForm,
+    ProfessorForm,
+    FuncionarioForm,
+    ResponsavelForm,
+    AlunoResponsavelForm,
+)
+from .models import (
+    Aluno,
+    Funcionario,
+    Pessoa,
+    Professor,
+    Responsavel,
+    AlunoResponsavel,
+)
 
 
 # ───────────────────────────────────────────────
@@ -30,6 +44,39 @@ class FuncionarioInline(SemIconesRelacionaisMixin, admin.StackedInline):
     verbose_name_plural = 'perfil de funcionario'
 
 
+class ResponsavelInline(SemIconesRelacionaisMixin, admin.StackedInline):
+    model = Responsavel
+    extra = 0
+    verbose_name = 'perfil de responsavel'
+    verbose_name_plural = 'perfil de responsavel'
+
+
+# ───────────────────────────────────────────────
+# Inlines — vinculos aluno-responsavel
+# ───────────────────────────────────────────────
+
+class AlunoResponsavelInlineParaAluno(SemIconesRelacionaisMixin, admin.TabularInline):
+    """Mostra responsaveis do aluno na tela do Aluno."""
+    model = AlunoResponsavel
+    form = AlunoResponsavelForm
+    fk_name = 'aluno'
+    extra = 1
+    autocomplete_fields = ('responsavel',)
+    verbose_name = 'responsavel'
+    verbose_name_plural = 'responsaveis'
+
+
+class AlunoResponsavelInlineParaResponsavel(SemIconesRelacionaisMixin, admin.TabularInline):
+    """Mostra alunos vinculados na tela do Responsavel."""
+    model = AlunoResponsavel
+    form = AlunoResponsavelForm
+    fk_name = 'responsavel'
+    extra = 1
+    autocomplete_fields = ('aluno',)
+    verbose_name = 'aluno vinculado'
+    verbose_name_plural = 'alunos vinculados'
+
+
 # ───────────────────────────────────────────────
 # ModelAdmins
 # ───────────────────────────────────────────────
@@ -42,7 +89,7 @@ class PessoaAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
     search_fields = ('nome', 'cpf', 'email')
     list_editable = ('ativo',)
     list_per_page = 25
-    inlines = [AlunoInline, ProfessorInline, FuncionarioInline]
+    inlines = [AlunoInline, ProfessorInline, FuncionarioInline, ResponsavelInline]
     fieldsets = (
         ('Identificacao', {
             'fields': ('nome', 'cpf', 'data_nascimento'),
@@ -67,6 +114,7 @@ class AlunoAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
     search_fields = ('pessoa__nome', 'matricula')
     list_per_page = 25
     autocomplete_fields = ('pessoa',)
+    inlines = [AlunoResponsavelInlineParaAluno]
     fieldsets = (
         ('Vinculo', {
             'fields': ('pessoa',),
@@ -117,5 +165,48 @@ class FuncionarioAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
         }),
         ('Status', {
             'fields': ('ativo',),
+        }),
+    )
+
+
+@admin.register(Responsavel)
+class ResponsavelAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
+    form = ResponsavelForm
+    list_display = ('pessoa', 'tipo', 'ativo')
+    list_filter = ('ativo', 'tipo')
+    search_fields = ('pessoa__nome',)
+    list_editable = ('ativo',)
+    list_per_page = 25
+    autocomplete_fields = ('pessoa',)
+    inlines = [AlunoResponsavelInlineParaResponsavel]
+    fieldsets = (
+        ('Vinculo', {
+            'fields': ('pessoa',),
+        }),
+        ('Classificacao', {
+            'fields': ('tipo',),
+        }),
+        ('Status', {
+            'fields': ('ativo',),
+        }),
+    )
+
+
+@admin.register(AlunoResponsavel)
+class AlunoResponsavelAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
+    form = AlunoResponsavelForm
+    list_display = ('aluno', 'responsavel', 'tipo_vinculo',
+                    'responsavel_principal', 'autorizado_retirar_aluno')
+    list_filter = ('tipo_vinculo', 'responsavel_principal',
+                   'autorizado_retirar_aluno')
+    search_fields = ('aluno__pessoa__nome', 'responsavel__pessoa__nome')
+    list_per_page = 25
+    autocomplete_fields = ('aluno', 'responsavel')
+    fieldsets = (
+        ('Vinculo', {
+            'fields': ('aluno', 'responsavel', 'tipo_vinculo'),
+        }),
+        ('Permissoes', {
+            'fields': ('responsavel_principal', 'autorizado_retirar_aluno'),
         }),
     )

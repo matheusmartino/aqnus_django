@@ -8,7 +8,7 @@ ERP escolar desenvolvido em Django, com foco em cadastros acadêmicos, estrutura
 |-------|--------|--------|
 | 1 | Cadastros fundamentais (Pessoa, Aluno, Professor, Funcionário, Escola, Usuário) | **Concluída** |
 | 2 | Estrutura acadêmica (AnoLetivo, Disciplina, Turma, ProfessorDisciplina, AlunoTurma) | **Concluída** |
-| 3 | Operação diária (Matrícula, Frequência, Notas, Boletim) | Planejada |
+| 3 | Operacao escolar (Matricula, Responsaveis, Historico) | **Concluida** |
 | 4 | Biblioteca escolar (Acervo, Empréstimo, Devolução) | Planejada |
 | 5 | Portal web (Painel do aluno, professor e responsável) | Planejada |
 
@@ -208,13 +208,32 @@ Requer que o seed da Etapa 1 ja tenha sido executado. Cria a estrutura academica
 
 Idempotente — pode rodar varias vezes sem duplicar dados.
 
-### 9. Rodar o servidor
+### 9. Popular dados operacionais (seed Etapa 3)
+
+```bash
+python manage.py seed_operacional
+```
+
+Requer que os seeds das Etapas 1 e 2 ja tenham sido executados. Cria os dados operacionais:
+
+| Entidade | Qtd | Exemplos |
+|----------|-----|----------|
+| Matriculas | 5+ | Matriculas formais para alunos existentes |
+| Transferencia | 1 | Isabela transferida do 5o Ano B para 5o Ano A |
+| Encerramento | 1 | Gabriel com matricula encerrada (conclusao) |
+| Responsaveis | 4 | Pais dos alunos (Carlos, Ana Paula, Roberto, Maria Clara) |
+| Aluno-Responsavel | 6 | Lucas e Julia como irmaos (mesmos pais) |
+| Movimentacoes | 7+ | Historico gerado automaticamente pelo service |
+
+Idempotente — pode rodar varias vezes sem duplicar dados.
+
+### 10. Rodar o servidor
 
 ```bash
 python manage.py runserver
 ```
 
-### 10. Acessar
+### 11. Acessar
 
 - Portal: http://127.0.0.1:8000/
 - Admin: http://127.0.0.1:8000/admin/
@@ -241,6 +260,9 @@ python manage.py seed_data
 
 # Popular dados academicos (Etapa 2)
 python manage.py seed_academic
+
+# Popular dados operacionais (Etapa 3)
+python manage.py seed_operacional
 
 # Abrir shell Django
 python manage.py shell
@@ -314,9 +336,56 @@ A Etapa 2 está **concluída**. Ela cobre a **estrutura acadêmica**:
 - **Seed**: `python manage.py seed_academic` com dados realistas e vinculos
 - **Repositories**: acesso a dados encapsulado por entidade
 
-### O que NÃO faz parte da Etapa 2
+### O que NAO faz parte da Etapa 2
 
-- Notas e frequência — Etapa 3
-- Horários de aula — futuro
-- Boletim — Etapa 3
+- Operacao escolar (Matricula formal, Responsaveis) — Etapa 3
+- Notas e frequencia — Etapa futura
+- Horarios de aula — futuro
+- Boletim — Etapa futura
+- Biblioteca — Etapa 4
+
+## Etapa 3 — Escopo e status
+
+A Etapa 3 esta **concluida**. Ela cobre a **operacao escolar e filiacao**:
+
+### Conceitos-chave
+
+- **Matricula (evento)**: ato administrativo formal. Representa HISTORICO — nunca e apagada. Um aluno so pode ter uma matricula ativa por ano letivo. Tipos: inicial, transferencia, remanejamento.
+- **AlunoTurma (estado)**: continua representando o estado ATUAL do aluno numa turma. Atualizado pelo service de matricula.
+- **MovimentacaoAluno (historico)**: registro de eventos na vida escolar (matricula, transferencia, encerramento). Criado automaticamente pelo service. Nunca e apagado.
+- **Responsavel (filiacao)**: perfil de responsavel vinculado a Pessoa (mesmo padrao de Aluno/Professor). Um responsavel pode estar vinculado a varios alunos — irmaos compartilham responsaveis.
+- **AlunoResponsavel (vinculo)**: relacionamento aluno-responsavel com tipo de vinculo, flag de responsavel principal e autorizacao de retirada.
+
+### Entidades criadas
+
+| Entidade | App | Descricao |
+|----------|-----|-----------|
+| Matricula | academic | Ato administrativo de matricula (evento/historico) |
+| MovimentacaoAluno | academic | Registro de movimentacoes na vida escolar |
+| Responsavel | people | Perfil de responsavel (pai/mae/responsavel legal) |
+| AlunoResponsavel | people | Vinculo aluno-responsavel (filiacao) |
+
+### Fluxos operacionais
+
+1. **Matricula inicial**: `MatriculaService.matricular_aluno()` → cria Matricula + atualiza AlunoTurma + registra MovimentacaoAluno
+2. **Transferencia**: `MatriculaService.transferir_aluno()` → encerra matricula atual + cria nova matricula na turma destino + atualiza AlunoTurma + registra movimentacoes (saida + entrada)
+3. **Encerramento**: `MatriculaService.encerrar_matricula()` → encerra matricula + desativa AlunoTurma + registra movimentacao
+
+### Regras de negocio (em `academic/services/matricula_service.py`)
+
+- Um aluno so pode ter UMA matricula ativa por ano letivo (constraint parcial no banco + validacao no service)
+- Transferencia encerra a matricula atual antes de criar a nova
+- Historico (MovimentacaoAluno) nunca e apagado
+- MovimentacaoAluno e readonly no admin (criado apenas via service)
+
+### Seed
+
+`python manage.py seed_operacional` — cria matriculas formais, uma transferencia, um encerramento, 4 responsaveis, e 2 alunos irmaos compartilhando os mesmos pais.
+
+### O que NAO faz parte da Etapa 3
+
+- Notas e frequencia — Etapa futura
+- Horarios de aula — futuro
+- Boletim — Etapa futura
+- Financeiro — futuro
 - Biblioteca — Etapa 4

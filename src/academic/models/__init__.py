@@ -3,6 +3,8 @@ from .disciplina import Disciplina
 from .turma import Turma
 from .professor_disciplina import ProfessorDisciplina
 from .aluno_turma import AlunoTurma
+from .matricula import Matricula
+from .movimentacao_aluno import MovimentacaoAluno
 
 __all__ = [
     'AnoLetivo',
@@ -10,4 +12,6 @@ __all__ = [
     'Turma',
     'ProfessorDisciplina',
     'AlunoTurma',
+    'Matricula',
+    'MovimentacaoAluno',
 ]
