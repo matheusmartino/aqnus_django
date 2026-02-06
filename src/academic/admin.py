@@ -1,4 +1,5 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 
 from core.admin_mixins import SemIconesRelacionaisMixin
 from .forms import (
@@ -9,6 +10,9 @@ from .forms import (
     AlunoTurmaForm,
     MatriculaForm,
     MovimentacaoAlunoForm,
+    HorarioForm,
+    GradeHorariaForm,
+    GradeItemForm,
 )
 from .models import (
     AnoLetivo,
@@ -18,7 +22,11 @@ from .models import (
     AlunoTurma,
     Matricula,
     MovimentacaoAluno,
+    Horario,
+    GradeHoraria,
+    GradeItem,
 )
+from .services import GradeService
 
 
 # ───────────────────────────────────────────────
@@ -231,3 +239,171 @@ class MovimentacaoAlunoAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+# ───────────────────────────────────────────────
+# Grade Horaria (Etapa 5)
+# ───────────────────────────────────────────────
+
+class GradeItemInline(SemIconesRelacionaisMixin, admin.TabularInline):
+    """Permite adicionar aulas diretamente na tela da Grade Horaria."""
+    model = GradeItem
+    form = GradeItemForm
+    extra = 1
+    autocomplete_fields = ('horario', 'disciplina', 'professor')
+    ordering = ('dia_semana', 'horario__ordem')
+
+
+@admin.register(Horario)
+class HorarioAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
+    form = HorarioForm
+    list_display = ('ordem', 'hora_inicio', 'hora_fim', 'turno')
+    list_filter = ('turno',)
+    search_fields = ('ordem',)
+    list_per_page = 25
+    ordering = ('turno', 'ordem')
+    fieldsets = (
+        ('Identificacao', {
+            'fields': ('ordem', 'turno'),
+        }),
+        ('Horarios', {
+            'fields': ('hora_inicio', 'hora_fim'),
+        }),
+    )
+
+
+@admin.register(GradeHoraria)
+class GradeHorariaAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
+    form = GradeHorariaForm
+    list_display = ('turma', 'ano_letivo', 'ativa', 'qtd_aulas')
+    list_filter = ('ativa', 'ano_letivo')
+    search_fields = ('turma__nome', 'ano_letivo__nome')
+    list_editable = ('ativa',)
+    list_per_page = 25
+    autocomplete_fields = ('turma', 'ano_letivo')
+    inlines = [GradeItemInline]
+    fieldsets = (
+        ('Vinculo', {
+            'fields': ('turma', 'ano_letivo'),
+        }),
+        ('Status', {
+            'fields': ('ativa',),
+        }),
+        ('Observacao', {
+            'fields': ('observacao',),
+            'classes': ('collapse',),
+        }),
+    )
+
+    @admin.display(description='Aulas')
+    def qtd_aulas(self, obj):
+        return obj.itens.count()
+
+    def save_formset(self, request, form, formset, change):
+        """Valida itens da grade via GradeService antes de salvar."""
+        instances = formset.save(commit=False)
+
+        for instance in instances:
+            if isinstance(instance, GradeItem):
+                try:
+                    # Valida habilitacao do professor
+                    GradeService.validar_habilitacao_professor(
+                        instance.professor,
+                        instance.disciplina,
+                        instance.grade_horaria.ano_letivo,
+                    )
+
+                    # Valida conflito de professor
+                    GradeService.validar_conflito_professor(
+                        instance.professor,
+                        instance.dia_semana,
+                        instance.horario,
+                        instance.grade_horaria.ano_letivo,
+                        excluir_item_id=instance.pk,
+                    )
+
+                    # Valida conflito de turma (ja coberto pela constraint,
+                    # mas mensagem e mais clara)
+                    GradeService.validar_conflito_turma(
+                        instance.grade_horaria,
+                        instance.dia_semana,
+                        instance.horario,
+                        excluir_item_id=instance.pk,
+                    )
+
+                    instance.save()
+
+                except ValidationError as e:
+                    messages.error(request, str(e.message))
+            else:
+                instance.save()
+
+        # Processa deletes
+        for obj in formset.deleted_objects:
+            obj.delete()
+
+        formset.save_m2m()
+
+
+@admin.register(GradeItem)
+class GradeItemAdmin(SemIconesRelacionaisMixin, admin.ModelAdmin):
+    form = GradeItemForm
+    list_display = ('grade_horaria', 'dia_semana_display', 'horario',
+                    'disciplina', 'professor')
+    list_filter = ('dia_semana', 'grade_horaria__ano_letivo',
+                   'grade_horaria__turma')
+    search_fields = (
+        'grade_horaria__turma__nome',
+        'disciplina__nome',
+        'professor__pessoa__nome',
+    )
+    autocomplete_fields = ('grade_horaria', 'horario', 'disciplina', 'professor')
+    list_per_page = 25
+    fieldsets = (
+        ('Grade', {
+            'fields': ('grade_horaria',),
+        }),
+        ('Alocacao', {
+            'fields': ('dia_semana', 'horario'),
+        }),
+        ('Aula', {
+            'fields': ('disciplina', 'professor'),
+        }),
+    )
+
+    @admin.display(description='Dia', ordering='dia_semana')
+    def dia_semana_display(self, obj):
+        return obj.get_dia_semana_display()
+
+    def save_model(self, request, obj, form, change):
+        """Valida via GradeService antes de salvar."""
+        try:
+            # Valida habilitacao do professor
+            GradeService.validar_habilitacao_professor(
+                obj.professor,
+                obj.disciplina,
+                obj.grade_horaria.ano_letivo,
+            )
+
+            # Valida conflito de professor
+            GradeService.validar_conflito_professor(
+                obj.professor,
+                obj.dia_semana,
+                obj.horario,
+                obj.grade_horaria.ano_letivo,
+                excluir_item_id=obj.pk if change else None,
+            )
+
+            # Valida conflito de turma
+            GradeService.validar_conflito_turma(
+                obj.grade_horaria,
+                obj.dia_semana,
+                obj.horario,
+                excluir_item_id=obj.pk if change else None,
+            )
+
+            super().save_model(request, obj, form, change)
+            messages.success(request, f'Aula salva com sucesso: {obj}')
+
+        except ValidationError as e:
+            messages.error(request, str(e.message))

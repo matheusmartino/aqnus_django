@@ -89,8 +89,12 @@ src/<app>/
 - `Matricula` — evento formal de matricula com tipo (inicial/transferencia/remanejamento) e status (ativa/encerrada/cancelada)
 - `MovimentacaoAluno` — historico imutavel de eventos (matricula, transferencia, encerramento)
 - `MatriculaService` — regras de negocio para matricular, transferir e encerrar (em `academic/services/`)
-- Admin com inlines: AlunoTurma e Matricula na Turma, ProfessorDisciplina na Disciplina, Movimentacoes na Matricula
-- Futuramente: Frequencia, Notas, Boletim (Etapa 4), Horarios de aula
+- `Horario` — slot de tempo com ordem, hora_inicio, hora_fim e turno (unique por turno+ordem)
+- `GradeHoraria` — grade de aulas de uma turma em um ano letivo (estado, nao historico)
+- `GradeItem` — aula na grade, vinculando dia_semana + horario + disciplina + professor
+- `GradeService` — regras de negocio para validar conflitos de professor e turma
+- Admin com inlines: AlunoTurma e Matricula na Turma, ProfessorDisciplina na Disciplina, Movimentacoes na Matricula, GradeItem na GradeHoraria
+- Futuramente: Frequencia, Notas, Boletim, Diario de Classe
 
 ### `library`
 - `Autor` — autor de obras do acervo
@@ -200,11 +204,13 @@ O domínio é escolar brasileiro. Os operadores do sistema (secretaria, coordena
 
 4. **Etapa 4** ✅: Biblioteca escolar — Autor, Editora, Assunto, Obra, Exemplar, Emprestimo. BibliotecaService com regras de emprestimo/devolucao. Seed da biblioteca.
 
-5. **Etapa 5**: Frequencia, Notas, Boletim. Lancamentos pelo Admin e depois por telas proprias.
+5. **Etapa 5** ✅: Grade horaria escolar — Horario, GradeHoraria, GradeItem. GradeService com validacoes de conflito. Seed da grade.
 
-6. **Etapa 6**: Portal web com autenticacao, paineis por perfil.
+6. **Etapa 6**: Frequencia, Notas, Boletim. Lancamentos pelo Admin e depois por telas proprias.
 
-7. **Futuramente**: API REST (Django REST Framework) se houver necessidade de integracao com apps mobile ou sistemas externos.
+7. **Etapa 7**: Portal web com autenticacao, paineis por perfil.
+
+8. **Futuramente**: API REST (Django REST Framework) se houver necessidade de integracao com apps mobile ou sistemas externos.
 
 ### Critérios de encerramento — Etapa 2
 
@@ -284,6 +290,14 @@ Etapa 4 — BIBLIOTECA (acervo e circulacao)
 │              └── Emprestimo ── evento de circulacao │
 │  BibliotecaService ── regras de emprestimo         │
 └─────────────────────────────────────────────────┘
+
+Etapa 5 — GRADE HORARIA (organizacao das aulas)
+┌─────────────────────────────────────────────────┐
+│  Horario ── slot de tempo (turno + ordem)          │
+│  GradeHoraria ── grade de uma turma (ESTADO)       │
+│       └── GradeItem ── aula alocada (dia/horario)  │
+│  GradeService ── validacoes de conflito            │
+└─────────────────────────────────────────────────┘
 ```
 
 ### Cadastro vs. Estrutura vs. Operacao
@@ -349,6 +363,28 @@ Emprestimo atrasado  → Emprestimo(status=atrasado)
 
 O `BibliotecaService` e o unico ponto de mutacao — admin e seeds chamam o service, nunca alteram Emprestimo ou Exemplar.situacao diretamente.
 
+### Grade horaria como estado, nao historico
+
+Diferente de Matricula e Emprestimo (que sao eventos), a `GradeHoraria` representa o **estado atual** do planejamento de aulas de uma turma. Quando o horario precisa ser ajustado (professor substituto, mudanca de sala, redistribuicao de carga horaria), a grade e editada diretamente.
+
+Por que nao versionar grades?
+
+- **Complexidade desnecessaria**: criar nova grade a cada alteracao exigiria migrar todos os itens, tratar grades sobrepostas, definir regras de vigencia
+- **Historico irrelevante**: nao ha caso de uso real para consultar "como era a grade em abril" — o relevante e o horario atual
+- **Historico em outro lugar**: se houver necessidade de auditoria (quem deu aula quando), sera registrado no Diario de Classe (Etapa futura), nao na grade
+
+```
+Grade alterada       → GradeItem editado diretamente
+                     → GradeService valida conflitos
+                     → Nenhum historico gerado
+
+Necessidade futura   → Diario de Classe registra aulas efetivas
+                     → Frequencia registra presencas
+                     → Grade continua sendo ESTADO ATUAL
+```
+
+O `GradeService` valida conflitos antes de qualquer alteracao — admin e seeds chamam o service, nunca alteram GradeItem diretamente.
+
 ### Criterios de encerramento — Etapa 4
 
 - [x] Models criados: Autor, Editora, Assunto, Obra, Exemplar, Emprestimo
@@ -374,6 +410,32 @@ O `BibliotecaService` e o unico ponto de mutacao — admin e seeds chamam o serv
 - [x] Nenhum model das Etapas 1, 2 e 3 foi alterado
 - [x] Seeds anteriores (`seed_data`, `seed_academic`, `seed_operacional`) continuam funcionando
 - [x] Documentacao atualizada (README.md, ARQUITETURA.md)
+
+### Criterios de encerramento — Etapa 5
+
+- [x] Models criados: Horario, GradeHoraria, GradeItem, DiaSemana (enum)
+- [x] Todos estendem `ModeloBase` (campos de auditoria)
+- [x] ForeignKeys com `on_delete=PROTECT` para seguranca referencial (exceto GradeItem->GradeHoraria que usa CASCADE)
+- [x] UniqueConstraint: turno+ordem para Horario
+- [x] UniqueConstraint: grade+dia+horario para GradeItem
+- [x] Partial UniqueConstraint: apenas uma grade ativa por turma/ano
+- [x] `GradeService` com regras de negocio: validar habilitacao professor, detectar conflitos
+- [x] Service valida conflito de professor (mesmo dia/horario em qualquer turma do ano)
+- [x] Service valida conflito de turma (mesmo dia/horario na mesma grade)
+- [x] Admin: GradeItemInline na GradeHoraria
+- [x] Admin: save_model e save_formset chamam GradeService para validacao
+- [x] Admin: mensagens de erro humanas para conflitos
+- [x] Forms com mensagens de erro humanas para constraints
+- [x] Todos os admins herdam `SemIconesRelacionaisMixin`
+- [x] Todos os campos FK usam `autocomplete_fields`
+- [x] Migration gerada e aplicavel
+- [x] Seed da grade (`seed_grade`) com validacao de pre-requisitos das Etapas 1 e 2
+- [x] Seed idempotente e atomico
+- [x] Seed cria: horarios padrao (matutino/vespertino), grade completa sem conflitos
+- [x] Nenhum model das Etapas 1, 2, 3 e 4 foi alterado
+- [x] Seeds anteriores (`seed_data`, `seed_academic`, `seed_operacional`, `seed_biblioteca`) continuam funcionando
+- [x] Documentacao atualizada (README.md, ARQUITETURA.md)
+- [x] Explicacao arquitetural: por que grade e estado e nao historico
 
 ## Papel do Django Admin vs. Portal Web
 

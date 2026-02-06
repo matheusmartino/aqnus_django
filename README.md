@@ -10,7 +10,8 @@ ERP escolar desenvolvido em Django, com foco em cadastros acadêmicos, estrutura
 | 2 | Estrutura acadêmica (AnoLetivo, Disciplina, Turma, ProfessorDisciplina, AlunoTurma) | **Concluída** |
 | 3 | Operacao escolar (Matricula, Responsaveis, Historico) | **Concluida** |
 | 4 | Biblioteca escolar (Acervo, Emprestimo, Devolucao) | **Concluida** |
-| 5 | Portal web (Painel do aluno, professor e responsável) | Planejada |
+| 5 | Grade horaria escolar (Horario, GradeHoraria, GradeItem) | **Concluida** |
+| 6 | Portal web (Painel do aluno, professor e responsável) | Planejada |
 
 ## Tecnologia
 
@@ -246,13 +247,29 @@ Requer que o seed da Etapa 1 ja tenha sido executado. Cria os dados da bibliotec
 
 Idempotente — pode rodar varias vezes sem duplicar dados.
 
-### 11. Rodar o servidor
+### 11. Popular dados da grade horaria (seed Etapa 5)
+
+```bash
+python manage.py seed_grade
+```
+
+Requer que os seeds das Etapas 1 e 2 ja tenham sido executados. Cria os dados da grade horaria:
+
+| Entidade | Qtd | Exemplos |
+|----------|-----|----------|
+| Horarios | 11 | 6 matutino (07:30-13:20), 5 vespertino (13:30-18:20) |
+| Grades | 1 | Grade ativa para 5o Ano A — 2025 |
+| Itens (aulas) | 30 | 6 aulas por dia (seg a sex), sem conflitos |
+
+Idempotente — pode rodar varias vezes sem duplicar dados.
+
+### 12. Rodar o servidor
 
 ```bash
 python manage.py runserver
 ```
 
-### 12. Acessar
+### 13. Acessar
 
 - Portal: http://127.0.0.1:8000/
 - Admin: http://127.0.0.1:8000/admin/
@@ -285,6 +302,9 @@ python manage.py seed_operacional
 
 # Popular dados da biblioteca (Etapa 4)
 python manage.py seed_biblioteca
+
+# Popular dados da grade horaria (Etapa 5)
+python manage.py seed_grade
 
 # Abrir shell Django
 python manage.py shell
@@ -457,4 +477,48 @@ A Etapa 4 esta **concluida**. Ela cobre a **biblioteca escolar**:
 - Notas e frequencia — Etapa futura
 - Reserva de exemplares — futuro
 - Multas por atraso — futuro
-- Portal web — Etapa 5
+- Portal web — Etapa 6
+
+## Etapa 5 — Escopo e status
+
+A Etapa 5 esta **concluida**. Ela cobre a **grade horaria escolar**:
+
+### Conceitos-chave
+
+- **Horario (slot)**: define um periodo de aula (ex: 1o horario das 07:30 as 08:20). Vinculado a um turno (matutino/vespertino/noturno). A ordem dentro do turno e unica.
+- **GradeHoraria (estado)**: representa a grade de aulas de uma turma em um ano letivo. Apenas uma grade pode estar ativa por turma/ano. NAO e historica — se o horario mudar, a grade e editada, nao versionada.
+- **GradeItem (alocacao)**: representa uma aula em um slot especifico (dia + horario) da grade. Vincula disciplina e professor ao slot.
+
+### Por que a grade NAO e historica?
+
+Diferente de Matricula e Emprestimo (que sao eventos), a grade horaria representa o **estado atual** do planejamento de aulas. Quando o horario muda (professor substituto, ajuste de carga), a grade e editada diretamente.
+
+Versionar grades traria complexidade sem beneficio real — nao ha necessidade de consultar "como era a grade em marco". O historico relevante (presenças, aulas dadas) sera registrado em entidades proprias nas etapas futuras (Diario de Classe).
+
+### Entidades criadas
+
+| Entidade | App | Descricao |
+|----------|-----|-----------|
+| Horario | academic | Slot de tempo (ordem, hora_inicio, hora_fim, turno) |
+| GradeHoraria | academic | Grade horaria de uma turma (vinculo turma + ano_letivo) |
+| GradeItem | academic | Aula na grade (dia_semana + horario + disciplina + professor) |
+| DiaSemana | academic | Enum com dias da semana (SEG, TER, QUA, QUI, SEX, SAB) |
+
+### Regras de conflito (em `academic/services/grade_service.py`)
+
+- **Conflito de professor**: um professor nao pode ter duas aulas no mesmo dia/horario em todo o ano letivo
+- **Conflito de turma**: uma turma nao pode ter duas aulas no mesmo dia/horario (ja coberto por UniqueConstraint)
+- **Habilitacao obrigatoria**: o professor deve estar cadastrado em ProfessorDisciplina para a disciplina no ano letivo
+
+Todas as validacoes sao feitas pelo `GradeService` antes de salvar, tanto no admin quanto no seed.
+
+### Seed
+
+`python manage.py seed_grade` — cria horarios padrao (6 matutino, 5 vespertino), uma grade completa para 5o Ano A com 30 aulas (6 por dia, seg a sex) distribuidas sem conflitos.
+
+### O que NAO faz parte da Etapa 5
+
+- Chamada / frequencia — Etapa futura
+- Notas e diario de classe — Etapa futura
+- Substituicao de professor — futuro
+- Portal web — Etapa 6
