@@ -11,7 +11,8 @@ ERP escolar desenvolvido em Django, com foco em cadastros acadêmicos, estrutura
 | 3 | Operacao escolar (Matricula, Responsaveis, Historico) | **Concluida** |
 | 4 | Biblioteca escolar (Acervo, Emprestimo, Devolucao) | **Concluida** |
 | 5 | Grade horaria escolar (Horario, GradeHoraria, GradeItem) | **Concluida** |
-| 6 | Portal web (Painel do aluno, professor e responsável) | Planejada |
+| 6 | Front operacional (Dashboard, listagens de alunos/turmas/professores/biblioteca) | **Concluida** |
+| 7 | Portal web (Painel do aluno, professor e responsavel) | Planejada |
 
 ## Tecnologia
 
@@ -522,3 +523,64 @@ Todas as validacoes sao feitas pelo `GradeService` antes de salvar, tanto no adm
 - Notas e diario de classe — Etapa futura
 - Substituicao de professor — futuro
 - Portal web — Etapa 6
+
+## Front Operacional
+
+O AQNUS possui um **front operacional completo** que e a interface principal para uso diario. Ele oferece navegacao rapida, visual moderno, e telas de listagem, criacao e edicao para as entidades principais.
+
+### Papel do front
+
+- **Interface principal**: listagens, criacao e edicao de registros
+- **Visual moderno**: Bootstrap 5 + CSS customizado (Inter font, paleta propria)
+- **Forms reutilizados**: os mesmos ModelForms do Admin sao usados no front, com classes Bootstrap aplicadas via mixin
+- **CBVs (Class-Based Views)**: ListView, CreateView, UpdateView — views finas, sem regra de negocio
+
+### Papel do Admin
+
+O Django Admin permanece funcional e pode ser usado para:
+- **Manutencao**: operacoes em massa, debug, acesso a entidades auxiliares
+- **Operacoes complexas**: matriculas (usa MatriculaService), emprestimos (usa BibliotecaService), grade horaria (usa GradeService)
+- **Entidades de suporte**: Pessoa, Escola, Disciplina, Horario, etc.
+
+### Front vs Admin — quando usar cada um
+
+| Acao | Onde fazer |
+|------|-----------|
+| Listar, criar e editar Alunos | **Front** (`/alunos/`) |
+| Listar, criar e editar Turmas | **Front** (`/turmas/`) |
+| Listar, criar e editar Professores | **Front** (`/professores/`) |
+| Listar, criar e editar Obras | **Front** (`/biblioteca/`) |
+| Ver totais e emprestimos atrasados | **Front** (Dashboard `/`) |
+| Matricular aluno (fluxo formal) | **Admin** |
+| Emprestimo/devolucao de exemplar | **Admin** |
+| Grade horaria (criar/editar aulas) | **Admin** |
+| Cadastrar Pessoa, Escola, Disciplina | **Admin** |
+| Operacoes em massa, debug | **Admin** |
+
+### URLs disponiveis
+
+| URL | Descricao |
+|-----|-----------|
+| `/` | Dashboard com totais e emprestimos atrasados |
+| `/alunos/` | Listagem de alunos com busca |
+| `/alunos/novo/` | Criar novo aluno |
+| `/alunos/<id>/editar/` | Editar aluno |
+| `/turmas/` | Listagem de turmas com contagem de alunos |
+| `/turmas/nova/` | Criar nova turma |
+| `/turmas/<id>/editar/` | Editar turma |
+| `/professores/` | Listagem de professores |
+| `/professores/novo/` | Criar novo professor |
+| `/professores/<id>/editar/` | Editar professor |
+| `/biblioteca/` | Listagem de obras com exemplares disponiveis |
+| `/biblioteca/nova/` | Criar nova obra |
+| `/biblioteca/<id>/editar/` | Editar obra |
+
+### Padrao de criacao/edicao
+
+Cada entidade segue o mesmo padrao:
+
+1. **ListView** (CBV) — lista com busca, badges de status, link no nome para edicao
+2. **CreateView** (CBV) — formulario reutilizando o ModelForm existente, com Bootstrap via `BootstrapFormMixin`
+3. **UpdateView** (CBV) — mesmo formulario, pre-preenchido com dados atuais
+4. **Template compartilhado** — `form.html` unico por entidade (mesmo template para criar e editar)
+5. **Mensagens de feedback** — sucesso/erro via Django Messages framework

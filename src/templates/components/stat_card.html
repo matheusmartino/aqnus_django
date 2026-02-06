@@ -1,0 +1,9 @@
+<div class="aq-stat-card">
+    <div class="aq-stat-icon" {% if color %}style="background-color: var(--aq-{{ color }}-bg, var(--aq-primary-light)); color: var(--aq-{{ color }}, var(--aq-primary));"{% endif %}>
+        {{ icon }}
+    </div>
+    <div>
+        <div class="aq-stat-number">{{ value }}</div>
+        <div class="aq-stat-label">{{ label }}</div>
+    </div>
+</div>

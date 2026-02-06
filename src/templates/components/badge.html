@@ -1,0 +1,9 @@
+{% if status == 'ativo' or status == 'ativa' or status == 'disponivel' or status == 'bom' %}
+    <span class="aq-badge aq-badge-green">{{ label }}</span>
+{% elif status == 'atrasado' or status == 'provisorio' or status == 'regular' or status == 'transferido' or status == 'emprestado' %}
+    <span class="aq-badge aq-badge-yellow">{{ label }}</span>
+{% elif status == 'inativo' or status == 'cancelado' or status == 'cancelada' or status == 'desistente' or status == 'ruim' or status == 'danificado' or status == 'baixado' or status == 'indisponivel' %}
+    <span class="aq-badge aq-badge-red">{{ label }}</span>
+{% else %}
+    <span class="aq-badge aq-badge-gray">{{ label }}</span>
+{% endif %}

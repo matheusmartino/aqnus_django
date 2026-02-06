@@ -142,6 +142,17 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # ───────────────────────────────────────────────
+# Mensagens
+# ───────────────────────────────────────────────
+
+from django.contrib.messages import constants as messages  # noqa: E402
+
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger',
+}
+
+
+# ───────────────────────────────────────────────
 # Padrões
 # ───────────────────────────────────────────────
 

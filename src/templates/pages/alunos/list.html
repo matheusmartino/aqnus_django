@@ -1,0 +1,47 @@
+{% extends "layout/base.html" %}
+
+{% block title %}AQNUS - Alunos{% endblock %}
+
+{% block page_header %}
+    {% include "components/page_header.html" with title="Alunos" action_url=create_url action_label="Novo Aluno" %}
+{% endblock %}
+
+{% block content %}
+<form method="get" class="aq-search">
+    <input type="text" name="q" value="{{ query|default:'' }}" class="form-control"
+           placeholder="Buscar por nome ou matricula...">
+</form>
+
+{% if alunos %}
+<div class="aq-table">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Matricula</th>
+                <th>Situacao</th>
+                <th>Turma</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for aluno in alunos %}
+            <tr>
+                <td>
+                    <a href="{% url 'web:aluno_edit' aluno.pk %}" class="aq-link">{{ aluno.pessoa.nome }}</a>
+                </td>
+                <td>{{ aluno.matricula }}</td>
+                <td>{% include "components/badge.html" with status=aluno.situacao label=aluno.get_situacao_display %}</td>
+                <td>{{ aluno.turma_atual|default:"-" }}</td>
+                <td>
+                    <a href="{% url 'web:aluno_edit' aluno.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    {% include "components/empty_state.html" with message="Nenhum aluno encontrado." %}
+{% endif %}
+{% endblock %}

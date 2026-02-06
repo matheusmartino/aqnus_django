@@ -1,0 +1,50 @@
+{% extends "layout/base.html" %}
+
+{% block title %}AQNUS - Turmas{% endblock %}
+
+{% block page_header %}
+    {% include "components/page_header.html" with title="Turmas" action_url=create_url action_label="Nova Turma" %}
+{% endblock %}
+
+{% block content %}
+{% if turmas %}
+<div class="aq-table">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Ano Letivo</th>
+                <th>Escola</th>
+                <th>Alunos</th>
+                <th>Status</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for turma in turmas %}
+            <tr>
+                <td>
+                    <a href="{% url 'web:turma_edit' turma.pk %}" class="aq-link">{{ turma.nome }}</a>
+                </td>
+                <td>{{ turma.ano_letivo }}</td>
+                <td>{{ turma.escola }}</td>
+                <td>{{ turma.qtd_alunos }}</td>
+                <td>
+                    {% if turma.ativa %}
+                        {% include "components/badge.html" with status="ativo" label="Ativa" %}
+                    {% else %}
+                        {% include "components/badge.html" with status="inativo" label="Inativa" %}
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'web:turma_edit' turma.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    {% include "components/empty_state.html" with message="Nenhuma turma encontrada." %}
+{% endif %}
+{% endblock %}

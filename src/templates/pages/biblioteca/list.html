@@ -1,0 +1,48 @@
+{% extends "layout/base.html" %}
+
+{% block title %}AQNUS - Biblioteca{% endblock %}
+
+{% block page_header %}
+    {% include "components/page_header.html" with title="Biblioteca" action_url=create_url action_label="Nova Obra" %}
+{% endblock %}
+
+{% block content %}
+{% if obras %}
+<div class="aq-table">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Titulo</th>
+                <th>Autor(es)</th>
+                <th>Exemplares Disponiveis</th>
+                <th>Emprestimos Ativos</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for obra in obras %}
+            <tr>
+                <td>
+                    <a href="{% url 'web:obra_edit' obra.pk %}" class="aq-link">{{ obra.titulo }}</a>
+                </td>
+                <td>
+                    {% for autor in obra.autores.all %}
+                        {{ autor.nome }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}
+                        -
+                    {% endfor %}
+                </td>
+                <td>{{ obra.exemplares_disponiveis }}</td>
+                <td>{{ obra.emprestimos_ativos }}</td>
+                <td>
+                    <a href="{% url 'web:obra_edit' obra.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    {% include "components/empty_state.html" with message="Nenhuma obra encontrada." %}
+{% endif %}
+{% endblock %}

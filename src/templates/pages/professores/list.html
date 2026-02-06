@@ -1,0 +1,48 @@
+{% extends "layout/base.html" %}
+
+{% block title %}AQNUS - Professores{% endblock %}
+
+{% block page_header %}
+    {% include "components/page_header.html" with title="Professores" action_url=create_url action_label="Novo Professor" %}
+{% endblock %}
+
+{% block content %}
+{% if professores %}
+<div class="aq-table">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Formacao</th>
+                <th>Carga Horaria Max</th>
+                <th>Status</th>
+                <th>Acoes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prof in professores %}
+            <tr>
+                <td>
+                    <a href="{% url 'web:professor_edit' prof.pk %}" class="aq-link">{{ prof.pessoa.nome }}</a>
+                </td>
+                <td>{{ prof.formacao }}</td>
+                <td>{{ prof.carga_horaria_max }}h/semana</td>
+                <td>
+                    {% if prof.ativo %}
+                        {% include "components/badge.html" with status="ativo" label="Ativo" %}
+                    {% else %}
+                        {% include "components/badge.html" with status="inativo" label="Inativo" %}
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'web:professor_edit' prof.pk %}" class="btn btn-outline-secondary btn-sm">Editar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    {% include "components/empty_state.html" with message="Nenhum professor encontrado." %}
+{% endif %}
+{% endblock %}

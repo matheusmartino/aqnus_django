@@ -28,7 +28,9 @@
       "Bash(grep:*)",
       "Bash(\"C:\\\\Users\\\\Dell\\\\source\\\\repos\\\\aqnus_django\\\\venv\\\\Scripts\\\\python.exe\" manage.py check)",
       "Bash(python3:*)",
-      "Bash(python manage.py:*)"
+      "Bash(python manage.py:*)",
+      "Bash(python:*)",
+      "Bash(del:*)"
     ]
   }
 }

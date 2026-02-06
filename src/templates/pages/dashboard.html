@@ -1,0 +1,52 @@
+{% extends "layout/base.html" %}
+
+{% block title %}AQNUS - Dashboard{% endblock %}
+
+{% block page_header %}
+    {% include "components/page_header.html" with title="Dashboard" %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        {% include "components/stat_card.html" with value=total_alunos label="Alunos ativos" icon='<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a23.54 23.54 0 0 0-2.688 6.352c3.196.402 6.462.614 9.77.614s6.574-.212 9.77-.614a23.54 23.54 0 0 0-2.688-6.352M12 3.75a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/></svg>' %}
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        {% include "components/stat_card.html" with value=total_turmas label="Turmas ativas" icon='<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/></svg>' %}
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        {% include "components/stat_card.html" with value=total_professores label="Professores ativos" icon='<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>' %}
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        {% include "components/stat_card.html" with value=total_emprestimos label="Emprestimos ativos" icon='<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"/></svg>' %}
+    </div>
+</div>
+
+{% if emprestimos_atrasados %}
+<h2 class="aq-section-title">Emprestimos atrasados</h2>
+<div class="aq-table">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Exemplar</th>
+                <th>Obra</th>
+                <th>Aluno</th>
+                <th>Data Emprestimo</th>
+                <th>Devolucao Prevista</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in emprestimos_atrasados %}
+            <tr>
+                <td>{{ e.exemplar.codigo_patrimonio }}</td>
+                <td>{{ e.exemplar.obra.titulo }}</td>
+                <td>{{ e.aluno.pessoa.nome|default:"-" }}</td>
+                <td>{{ e.data_emprestimo|date:"d/m/Y" }}</td>
+                <td>{{ e.data_prevista_devolucao|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
